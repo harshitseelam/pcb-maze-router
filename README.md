@@ -52,7 +52,7 @@ pcb-maze-router/
 ## Setup
 
 ```bash
-git clone https://github.com/<your-username>/pcb-maze-router
+git clone https://github.com/harshitseelam/pcb-maze-router
 cd pcb-maze-router
 pip install -r requirements.txt
 ```

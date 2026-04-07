@@ -34,14 +34,14 @@ pcb-maze-router/
 │   ├── lee.py           # Lee's Algorithm (BFS-based router)
 │   ├── astar.py         # A* heuristic router
 │   ├── router.py        # Multi-net orchestrator + rip-up & reroute
-│   ├── visualizer.py    # PCB-styled board plots, comparisons, charts, animation
+│   ├── visualizer.py    # PCB-styled board plots, comparisons, charts
 │   └── benchmarks.py    # Timing and performance comparison
 ├── examples/
 │   ├── test_case_1.json # 10x10 grid, 3 nets (simple)
 │   ├── test_case_2.json # 20x20 grid, 8 nets (medium)
 │   ├── test_case_3.json # 30x30 grid, 15 nets (hard)
 │   └── test_case_4.json # 20x20 grid, crossing constraint demo
-├── outputs/             # Auto-generated PNGs and GIFs
+├── outputs/             # Auto-generated PNGs
 ├── main.py              # Entry point
 ├── requirements.txt
 └── README.md
@@ -68,7 +68,6 @@ This will:
 2. Generate PCB-styled board images for each algorithm
 3. Generate side-by-side Lee vs A* comparison images
 4. Generate performance analysis bar charts (runtime, wire length, nodes explored)
-5. Generate animated BFS wave expansion GIFs
 
 All output files are saved to `outputs/`.
 
@@ -105,7 +104,6 @@ All output files are saved to `outputs/`.
 | `test_case_X_astar.png` | PCB board routed with A* |
 | `test_case_X_comparison.png` | Side-by-side Lee vs A* |
 | `performance_analysis.png` | Bar charts comparing runtime, wire length, nodes |
-| `test_case_X_wave.gif` | Animated BFS wave expansion + path backtracking |
 
 ---
 

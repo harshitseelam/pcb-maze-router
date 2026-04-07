@@ -1,62 +1,63 @@
-# src/lee.py
+# src/router.py
+# called by benchmarks and modified at runtime (monkey patching lee)
+from typing import List, Tuple, Optional
+from grid import Grid, WIRE, Coord, Path
+from lee import route as lee_route
 
-from collections import deque
-from typing import Optional
+Net = Tuple[Coord, Coord]   # Tuple[Tuple[int,int], Tuple[int,int]], it is just two coordinates (source, target)
 
-from grid import Grid, FREE, OBSTACLE, WIRE, Coord, Path
-# used in router, benchmarks, main
-# Module-level counter for benchmarking
-_nodes_explored = 0
+def _net_priority(net: Net) -> int:
+    (r1, c1), (r2, c2) = net
+    return abs(r1 - r2) + abs(c1 - c2)   # sort key
 
-def get_nodes_explored():   # getter method
-    return _nodes_explored
+def route_all(grid: Grid, nets: List[Net], rip_up: bool = True
+              ) -> Tuple[List[Optional[Path]], List[int]]:  # returns routed paths and failed indices
+    
+    # Sort nets by Manhattan distance - shortest first
+    indexed_nets = sorted(enumerate(nets), key=lambda x: _net_priority(x[1]))   # enumerating to keep the original index as we return int he same order as input nets list
+    
+    routed_paths: List[Optional[Path]] = [None] * len(nets)
+    failed_indices: List[int] = []
 
-def route(grid: Grid, source: Coord, target: Coord) -> Optional[Path]:
-    global _nodes_explored
-    sr, sc = source
-    tr, tc = target
+    for original_idx, net in indexed_nets:
+        source, target = net
+        path = lee_route(grid, source, target)  # lee returns None if no path exists
 
-    if grid.board[sr, sc] == OBSTACLE or grid.board[tr, tc] == OBSTACLE:
-        return None
+        if path:
+            routed_paths[original_idx] = path
+            grid.mark_wire(path)
+        else:
+            failed_indices.append(original_idx)
 
-    # temporarily free source and target so wave can pass through
-    grid.board[sr, sc] = FREE
-    grid.board[tr, tc] = FREE
+    # Rip-up and reroute for failed nets - runs only if atleast one net failed
+    if rip_up and failed_indices:
+        for failed_idx in failed_indices:
+            source, target = nets[failed_idx]
 
-    queue = deque()
-    queue.append((sr, sc))
-    grid.board[sr, sc] = 1  # wave label starts at 1
+            # Rip up all currently routed paths and reroute everything
+            for idx, path in enumerate(routed_paths):
+                if path is not None:
+                    grid.reset_wire(path)
+                    routed_paths[idx] = None
 
-    found = False
-    nodes = 0
-    while queue:
-        r, c = queue.popleft()
-        nodes += 1
-        if (r, c) == (tr, tc):
-            found = True
-            break
-        for nr, nc in grid.get_neighbors(r, c):
-            if grid.board[nr, nc] == FREE:
-                grid.board[nr, nc] = grid.board[r, c] + 1
-                queue.append((nr, nc))
+            # Re-sort remaining nets putting failed one first
+            remaining = [failed_idx] + [i for i in range(len(nets)) if i != failed_idx]
+            new_failed = []
 
-    _nodes_explored += nodes
+            for idx in remaining:
+                path = lee_route(grid, nets[idx][0], nets[idx][1])
+                if path:
+                    routed_paths[idx] = path
+                    grid.mark_wire(path)
+                else:
+                    new_failed.append(idx)
 
-    if not found:
-        grid.clear_wave_labels()
-        return None
+            failed_indices = new_failed
+            break  # one rip-up pass per call
 
-    # Backtrack from target to source
-    path = [(tr, tc)]
-    r, c = tr, tc
-    while (r, c) != (sr, sc):
-        current_label = grid.board[r, c]
-        for nr, nc in grid.get_neighbors(r, c):
-            if grid.board[nr, nc] == current_label - 1:
-                path.append((nr, nc))
-                r, c = nr, nc
-                break
+    return routed_paths, failed_indices
 
-    path.reverse()
-    grid.clear_wave_labels()
-    return path
+"""
+The real limitation of our algorithm is this one rip-up and reroute.
+In Industry they do it iteratively until a maximum iteration limit is reached.
+"""

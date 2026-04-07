@@ -187,10 +187,6 @@ def plot_pcb_board(grid, nets, routed_paths, title="PCB Router",
         print(f"  Saved: {save_path}")
     plt.close()
 
-# Backward compat
-def plot_board(grid, nets, routed_paths, title="PCB Router",
-               save_path=None, algo_name="Lee"):
-    return plot_pcb_board(grid, nets, routed_paths, title, save_path, algo_name)
 
 # -----------------------------------------------------------------
 # Comparison: Lee vs A* side by side
@@ -304,94 +300,3 @@ def plot_performance(results, save_path=None):
         print(f"  Saved performance chart: {save_path}")
     plt.close()
 
-# -----------------------------------------------------------------
-# Wave animation (PCB styled)
-# -----------------------------------------------------------------
-def animate_wave(grid, source, target, wave_history,
-                 final_path=None, save_path=None):
-    fig, ax = plt.subplots(figsize=(10, 10))
-    fig.patch.set_facecolor(PCB_BG)
-
-    base = np.full((grid.rows, grid.cols, 3), _hex_to_rgb(PCB_GREEN))
-    for r in range(grid.rows):
-        for c in range(grid.cols):
-            if grid.board[r, c] == OBSTACLE:
-                base[r, c] = _hex_to_rgb(COMP_BG)
-
-    im = ax.imshow(base.copy(), origin='upper')
-    ax.set_xticks(np.arange(-0.5, grid.cols, 1), minor=True)
-    ax.set_yticks(np.arange(-0.5, grid.rows, 1), minor=True)
-    ax.grid(which='minor', color=PCB_GRID, linewidth=0.3, alpha=0.3)
-    ax.tick_params(which='minor', size=0)
-    ax.set_xticks([]); ax.set_yticks([])
-    for s in ax.spines.values():
-        s.set_color(PCB_GRID)
-    ttl = ax.set_title("", fontsize=14, fontweight='bold',
-                        color=TEXT_LIGHT, pad=12)
-    cmap = plt.cm.plasma
-    nw = len(wave_history)
-
-    # extra frames for path backtracking + hold
-    pf = []
-    if final_path:
-        for k in range(len(final_path)):
-            pf.append(final_path[:k+1])
-    total = nw + len(pf) + 8
-
-    def update(frame):
-        img = base.copy()
-        sr, sc = source; tr, tc = target
-
-        if frame < nw:
-            cells = wave_history[frame]
-            if cells:
-                mx = max(l for _,_,l in cells)
-                for r, c, lab in cells:
-                    img[r, c] = cmap(lab / (mx + 1))[:3]
-            img[sr, sc] = (0.0, 1.0, 0.3)
-            img[tr, tc] = (1.0, 0.2, 0.2)
-            ttl.set_text(
-                f"Lee's Algorithm - Wave Expansion  "
-                f"[Step {frame+1}/{nw}]")
-        elif frame < nw + len(pf):
-            # dim the wave
-            if wave_history:
-                cells = wave_history[-1]
-                if cells:
-                    mx = max(l for _,_,l in cells)
-                    for r, c, lab in cells:
-                        rgb = cmap(lab / (mx+1))[:3]
-                        img[r, c] = tuple(v*0.3 for v in rgb)
-            idx = frame - nw
-            for r, c in pf[idx]:
-                img[r, c] = _hex_to_rgb(PAD_GOLD)
-            img[sr, sc] = (0.0, 1.0, 0.3)
-            img[tr, tc] = (1.0, 0.2, 0.2) \
-                if idx < len(pf)-1 else (0.0, 1.0, 0.3)
-            ttl.set_text(
-                f"Lee's Algorithm - Path Backtrack  "
-                f"[{idx+1}/{len(pf)}]")
-        else:
-            if wave_history:
-                cells = wave_history[-1]
-                if cells:
-                    mx = max(l for _,_,l in cells)
-                    for r, c, lab in cells:
-                        rgb = cmap(lab / (mx+1))[:3]
-                        img[r, c] = tuple(v*0.3 for v in rgb)
-            if final_path:
-                for r, c in final_path:
-                    img[r, c] = _hex_to_rgb(PAD_GOLD)
-            img[sr, sc] = (0.0, 1.0, 0.3)
-            img[tr, tc] = (0.0, 1.0, 0.3)
-            ttl.set_text("Lee's Algorithm - Route Complete")
-        im.set_data(img)
-        return [im, ttl]
-
-    ani = FuncAnimation(fig, update, frames=total,
-                        interval=80, blit=True, repeat=False)
-    if save_path:
-        os.makedirs(os.path.dirname(save_path), exist_ok=True)
-        ani.save(save_path, writer='pillow', fps=12)
-        print(f"  Saved animation: {save_path}")
-    plt.close()

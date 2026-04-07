@@ -12,27 +12,33 @@ from grid import Grid
 from router import route_all
 from lee import route as lee_route, get_nodes_explored as lee_nodes
 from astar import route as astar_route, get_nodes_explored as astar_nodes
+# We cannot write a modules internal variables without importing them
 import lee as _lee_mod
 import astar as _astar_mod
 import router as _router_mod
+"""
+Runs both A* and Lee on every test case by precisely calculating the time consumed by
+each algorithm, counting the nodes explored and packages the entire information in a
+dictionary so that visualizer can use it for output images
+"""
 
 
 def benchmark_test_case(filepath: str, algorithm: str = 'lee') -> Dict:
     """Run one algorithm on a test case and collect metrics."""
-    grid, nets = Grid.load_from_json(filepath)
+    grid, nets = Grid.load_from_json(filepath)  # Fresh board every time as old borad may have routed wire as obstacles
 
-    # Reset node counters
+    # Reset node counters - resetting both just for safety
     _lee_mod._nodes_explored = 0
     _astar_mod._nodes_explored = 0
 
     # Swap algorithm in the router
     if algorithm == 'astar':
-        _router_mod.lee_route = astar_route
+        _router_mod.lee_route = astar_route # this module injects astar_route to router during runtime aka MONKEY PATCHING
     else:
         _router_mod.lee_route = lee_route
 
-    start = time.perf_counter()
-    routed_paths, failed = route_all(grid, nets)
+    start = time.perf_counter() # highest resolution timer available in python
+    routed_paths, failed = route_all(grid, nets)    # we are not timing grid loading or counter resets
     elapsed = time.perf_counter() - start
 
     # Restore default

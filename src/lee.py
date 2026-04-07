@@ -2,12 +2,13 @@
 
 from collections import deque
 from typing import Optional
-from grid import Grid, FREE, OBSTACLE, WIRE, Coord, Path
 
+from grid import Grid, FREE, OBSTACLE, WIRE, Coord, Path
+# used in router, benchmarks, main
 # Module-level counter for benchmarking
 _nodes_explored = 0
 
-def get_nodes_explored():
+def get_nodes_explored():   # getter method
     return _nodes_explored
 
 def route(grid: Grid, source: Coord, target: Coord) -> Optional[Path]:
